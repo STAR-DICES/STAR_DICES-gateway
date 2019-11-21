@@ -1,6 +1,6 @@
+from wtforms.validators import DataRequired, Email, Length
 from flask_wtf import FlaskForm
 import wtforms as f
-from wtforms.validators import DataRequired, Email, Length
 
 MAX_CHAR_STORY_TITLE = 50
 MAX_CHAR_STORY = 1000

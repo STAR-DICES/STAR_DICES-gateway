@@ -2,14 +2,12 @@ import datetime
 import json
 import re
 
-from monolith.database import db, Story, Like, Dislike, retrieve_themes, retrieve_dice_set, is_date, Follow, get_suggested_stories
-from monolith.background import async_like, async_dislike, async_remove_like, async_remove_dislike
-from monolith.auth import admin_required, current_user
-from monolith.classes.DiceSet import _throw_to_faces
-
 from flask import Blueprint, redirect, render_template, request, abort
 from flask_login import current_user, login_user, logout_user, login_required
 from sqlalchemy.sql.expression import func
+
+from gateway.auth import admin_required, current_user
+
 
 stories = Blueprint('stories', __name__)
 
@@ -22,10 +20,18 @@ If not logged, the anonymous user is redirected to the login page.
 def _myhome(message=''):
     if current_user.is_anonymous:
         return redirect("/login", code=302)
-    followed_authors = []  # TODO: retrieve IDs of authors current user follows from follows microservice
-    followed_stories = []  # TODO: retrieve published stories from authors followed from stories microservice (sending followed_authors or doing a filtering here)
-    suggestedStories = []  # TODO: retrieve ranked stories from rank microservice
-    return render_template("home.html", message=message, followingstories=followingStories, suggestedstories=suggestedStories)
+
+    r = requests.get(stories_url + "/following-stories/" + current_user)
+    if r.status_code != 200:
+        abort(500)
+    followed_stories = json.loads(r.json())
+
+    r = requests.get(rank_url + "/rank/" + current_user)
+    if r.status_code != 200:
+        abort(500)
+    suggested_stories = json.loads(r.json())
+
+    return render_template("home.html",followed_stories=followed_stories, suggested_stories=suggested_stories)
 
 """
 This route returns, if the user is logged in, the list of all stories from all users
@@ -33,11 +39,8 @@ in the social network. The POST is used to filters those stories by user picked 
 If not logged, the anonymous user is redirected to the login page.
 """
 @stories.route('/explore', methods=['GET', 'POST'])
+@login_required
 def _stories(message=''):
-    if current_user.is_anonymous:
-        return redirect("/login", code=302)
-
-    allstories = []  # TODO: retrieve all published stories from stories microservice
     if request.method == 'POST':
         beginDate = request.form["beginDate"]
         if beginDate == "" or not is_date(beginDate):
@@ -47,10 +50,19 @@ def _stories(message=''):
         if endDate == "" or not is_date(endDate):
             endDate = str(datetime.date.max)
 
-        filteredStories = []  # TODO: filter allstories using beginDate and endDate
-        return render_template("explore.html", message="Filtered stories", stories=filteredStories, url="/story/")
+        r = requests.get(stories_url + "/stories_by_url/start=" + beginDate + "&end=" + endDate)
+        if r.status_code != 200:
+            abort(500)
+
+        filtered_stories = json.loads(r.json())
+        return render_template("explore.html", message="Filtered stories", stories=stories)
     else:
-        return render_template("explore.html", message=message, stories=allstories)
+        r = requests.get(stories_url + "/stories")
+        if r.status_code != 200:
+            abort(500)
+
+        stories = json.loads(r.json())
+        return render_template("explore.html", message=message, stories=stories)
 
 """
 This route requires the user to be logged in and returns an entire published story
@@ -60,14 +72,17 @@ options for like/dislike/delete (if authorized) options.
 @stories.route('/story/<int:story_id>')
 @login_required
 def _story(story_id, message=''):
-    story = None  # TODO: retrieve story by story_id from stories microservice
-    if story is None:
+    r = requests.get(stories_url + "/story/" + story_id + "/" + current_user)
+    if r.status_code == 404:
         message = 'Ooops.. Story not found!'
         return render_template("message.html", message=message)
+    elif r.status_code != 200:
+        abort(500)
 
-    rolls_outcome = json.loads(story.rolls_outcome)
+    story = json.loads(r.json())
+    rolls_outcome = story['rolls_outcome']
     return render_template("story.html", message=message, story=story,
-                           url="/story/", current_user=current_user, rolls_outcome=rolls_outcome)
+                           current_user=current_user, rolls_outcome=rolls_outcome)
 
 """
 In this route the user must be be logged in, and deletes a published story
@@ -76,11 +91,10 @@ if the author id is the same of the user calling it.
 @stories.route('/story/<story_id>/delete')
 @login_required
 def _delete_story(story_id):
-    response = False  # TODO: send delete request for story with story_id to stories microservice
-    if not response:
-        # TODO: retrieve why we failed from response and tell the user
-        abort(404)  # Story not found
-        abort(401)  # Story belongs to somebody else
+    data = {'user_id': current_user}
+    r = requests.delete(stories_url + "/story/" + story_id, data=json.dumps(data))
+    if r.status_code != 200:
+        abort(r.status_code)
 
     message = 'Story sucessfully deleted'
     return render_template("message.html", message=message)
@@ -92,14 +106,17 @@ written from someone else user.
 @stories.route('/random_story')
 @login_required
 def _random_story(message=''):
-    story = None  # TODO: retrieve random story from story microservice
-    if story is None:
+    r = requests.get(stories_url + "/random-story")
+    if r.status_code == 200:
+        rolls_outcome = json.loads(story.rolls_outcome)
+    elif r.status_code == 404:
         message = 'Ooops.. No random story for you!'
         rolls_outcome = []
-    else:
-        rolls_outcome = json.loads(story.rolls_outcome)
-    return render_template("story.html", message=message, story=story,
-                           url="/story/", current_user=current_user, rolls_outcome=rolls_outcome)
+    else
+        abort(500)
+
+    return render_template("story.html", message=message, story=story, current_user=current_user,
+                           rolls_outcome=rolls_outcome)
 
 """
 The route can be used by a logged in user to like a published story.
@@ -107,14 +124,20 @@ The route can be used by a logged in user to like a published story.
 @stories.route('/story/<int:story_id>/like')
 @login_required
 def _like(story_id):
-    response = False  # TODO: send add like request to reactions microservice and check response
-    if not response:
-        abort(404)
-    
-    if response:  # TODO: discriminate based on response if like was already present or not
+    data = {
+        'user_id': current_user,
+        'story_id': story_id
+    }
+    r.requests.post(reactions_url + "/like", data=json.dumps(data))
+    if r.status_code == 200:
         message = 'Like added!'
-    else:
-        message = 'You\'ve already liked this story!'
+    elif r.status_code == 409:
+        message = "You've already liked this story!"
+    elif r.status_code == 404:
+        abort(404)
+    else
+        abort(500)
+
     return _story(story_id, message)
 
 """
@@ -123,14 +146,20 @@ The route can be used by a logged in user to dislike a published story.
 @stories.route('/story/<int:story_id>/dislike')
 @login_required
 def _dislike(story_id):
-    response = False  # TODO: send add dislike request to reactions microservice and check response
-    if not response:
-        abort(404)
-    
-    if response:  # TODO: discriminate based on response if dislike was already present or not
+    data = {
+        'user_id': current_user,
+        'story_id': story_id
+    }
+    r.requests.post(reactions_url + "/like", data=json.dumps(data))
+    if r.status_code == 200:
         message = 'Dislike added!'
-    else:
-        message = 'You\'ve already disliked this story!'
+    elif r.status_code == 409:
+        message = "You've already disliked this story!"
+    elif r.status_code == 404:
+        abort(404)
+    else
+        abort(500)
+
     return _story(story_id, message)
 
 """
@@ -140,14 +169,20 @@ from a published story.
 @stories.route('/story/<int:story_id>/remove_like')
 @login_required
 def _remove_like(story_id):
-    response = False  # TODO: send remove like request to reactions microservice and check response
-    if not response:
-        abort(404)
-    
-    if response:  # TODO: discriminate based on response if like was present or not
-        message = 'You have to like it first!'
-    else:
+    data = {
+        'user_id': current_user,
+        'story_id': story_id
+    }
+    r.requests.delete(reactions_url + "/like", data=json.dumps(data))
+    if r.status_code == 200:
         message = 'You removed your like'
+    elif r.status_code == 409:
+        message = 'You have to like it first!'
+    elif r.status_code == 404:
+        abort(404)
+    else
+        abort(500)
+
     return _story(story_id, message)
     
 """
@@ -157,14 +192,20 @@ from a published story.
 @stories.route('/story/<int:story_id>/remove_dislike')
 @login_required
 def _remove_dislike(story_id):
-    response = False  # TODO: send remove dislike request to reactions microservice and check response
-    if not response:
-        abort(404)
-    
-    if response:  # TODO: discriminate based on response if dislike was present or not
-        message = 'You have to dislike it first!'
-    else:
+    data = {
+        'user_id': current_user,
+        'story_id': story_id
+    }
+    r.requests.post(reactions_url + "/like", data=json.dumps(data))
+    if r.status_code == 200:
         message = 'You removed your dislike'
+    elif r.status_code == 409:
+        message = 'You have to dislike it first!'
+    elif r.status_code == 404:
+        abort(404)
+    else
+        abort(500)
+
     return _story(story_id, message)
 
 """
@@ -178,23 +219,23 @@ Otherwise it redirects to /write_story of the pending draft.
 @login_required
 def new_stories():
     if request.method == 'GET':
-        dice_themes = retrieve_themes()  # TODO: now it must retrieve them from the dice microservice
+        r = requests.get(stories_url + "/retrieve-set-themes")
+        if r.status_code != 200:
+            abort(500)
+
+        dice_themes = json.loads(r.json())
         return render_template("new_story.html", themes=dice_themes)
     else:
-        stry = None  # TODO: retrieve unpublished story with selected theme written by the current user
-        if stry != None:
-            return redirect("/write_story/"+str(stry.id), code=302)
-
-        dice_set = retrieve_dice_set(request.form["theme"])  # TODO: now it must retrieve it from the dice microservice
-        face_set = dice_set.throw()[:int(request.form["dice_number"])]
-        new_story = Story()
-        new_story.author_id = current_user.id
-        new_story.theme = request.form["theme"]
-        new_story.rolls_outcome = json.dumps(face_set)
-        response = False  # TODO: send store unpublished story request to stories microservice
-        if not response:
-            pass  # TODO: can this fail?
-        return redirect('/write_story/'+str(new_story.id), code=302)
+        data = {
+            'theme': request.form["theme"],
+            'dice_number': request.form["dice_number"]
+        }
+        r = requests.post(stories_url + "/new_draft", data=json.dumps(data))
+        if r.status_code != 200:
+            abort(500)
+        
+        new_story_id = json.loads(r.json())['story_id']
+        return redirect('/write_story/' + str(new_story_id), code=302)
 
 """
 This route requires the user to be logged in and lets the user write a story or modify 
@@ -204,43 +245,57 @@ In both cases the used will be able to save it as draft or publish it.
 @stories.route('/write_story/<story_id>', methods=['POST', 'GET'])
 @login_required
 def write_story(story_id):
-    story = None  # TODO: retrieve unpublished story with story_id from stories microservice
-    if story is None:
+    r = requests.get(stories_url + "/story/" + story_id + "/" + current_user)
+    if r.status_code == 404:
         abort(404)
-
-    if current_user.id != story.author_id:
+    elif r.status_code == 401:
         abort(401)
+    elif r.status_code != 200:
+        abort(500)
 
-    rolls_outcome = json.loads(story.rolls_outcome)
-    faces = _throw_to_faces(rolls_outcome)
+    story = json.loads(r.json())
+    rolls_outcome = story.rolls_outcome
 
     if request.method == 'POST':
-        story.text = request.form["text"]
-        story.title = request.form["title"]
-        story.published = 1 if request.form["store_story"] == "1" else 0
+        story.text = request.form["text"],
+        story.published = request.form["store_story"] == "1",
+        if not story.published and (story.title == "None" or len(story.title.replace(" ", "")) == 0):
+            story.title = "Draft(" + story.theme + ")" 
+        else
+            story.title = request.form["title"]
 
-        if story.published == 1 and (story.title == "" or story.title == "None"):
+        # TODO: move these checks to stories microservice.
+        if story.published and not is_story_valid(story.text, rolls_outcome):
+            message = "You must use all the words of the outcome!"
+            return render_template("/write_story.html", theme=story.theme, outcome=rolls_outcome,
+                                   title=story.title, text=story.text, message=message)
+
+        if story.published and (story.title == "" or story.title == "None"):
             message = "You must complete the title in order to publish the story"
             return render_template("/write_story.html", theme=story.theme, outcome=rolls_outcome,
                                    title=story.title, text=story.text, message=message)
 
-        if story.published and not is_story_valid(story.text, faces):
-            message = "You must use all the words of the outcome!"
-            return render_template("/write_story.html", theme=story.theme, outcome=rolls_outcome, title=story.title, text=story.text, message=message)
-        
-        if story.published == 0 and (story.title == "None" or len(story.title.replace(" ", ""))==0):
-            story.title="Draft("+str(story.theme)+")" 
+        r = requests.put(stories_url + "/write_story", data=json.dumps(story))
+        if r.status_code != 200:
+            abort(500)
 
-        response = False  # TODO: send story update request to stories microservice
-        if not response:
-            pass  # TODO: can this fail?
-
-        if story.published == 1:
-            return redirect("../story/"+str(story.id), code=302)
-        elif story.published == 0:
+        if story.published:
+            return redirect("../story/" + str(story.id), code=302)
+        else
             return redirect("../", code=302)
 
-    return render_template("/write_story.html", theme=story.theme, outcome=rolls_outcome, title=story.title, text=story.text, message="")
+    # GET method
+    r = requests.get(stories_url + "/story/" + story_id + "/" + current_user)
+    if r.status_code == 404:
+        abort(404)
+    elif r.status_code == 401:
+        abort(401)
+    elif r.status_code != 200:
+        abort(500)
+
+    faces = _throw_to_faces(rolls_outcome)
+    return render_template("/write_story.html", theme=story.theme, outcome=rolls_outcome, title=story.title,
+                           text=story.text, message="")
 
 """
 Function to be called during story publishing that checks if the story
