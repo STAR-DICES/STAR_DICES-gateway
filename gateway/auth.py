@@ -1,6 +1,6 @@
 import functools
 
-from gateway.classes.User import User
+from gateway.classes.user import User
 
 from flask_login import current_user, LoginManager
 from flask import current_app as app

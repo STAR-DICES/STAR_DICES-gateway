@@ -84,7 +84,7 @@ def follow(author_id):
         'user_id': current_user,
         'followee_id': author_ir
     }
-    r = requests.put(follows_url + "/follow", json=data))
+    r = requests.put(follows_url + "/follow", json=data)
     if r.status_code == 200:
         message = "Following!"
     elif r.status_code == 409:
@@ -110,7 +110,7 @@ def unfollow(author_id):
         'user_id': current_user,
         'followee_id': author_ir
     }
-    r = requests.delete(follows_url + "/follow", json=data))
+    r = requests.delete(follows_url + "/follow", json=data)
     if r.status_code == 200:
         message = "Following!"
     elif r.status_code == 409:
