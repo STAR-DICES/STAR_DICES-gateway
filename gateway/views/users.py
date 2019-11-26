@@ -7,6 +7,8 @@ from gateway.auth import admin_required, current_user
 
 
 users = Blueprint('users', __name__)
+stories_url = "http://127.0.0.1:7000"
+stats_url = "http://127.0.0.1:9000"
 
 """
 This route returns to a logged user the list of the writers in the social network and
@@ -26,22 +28,23 @@ stories.
 @users.route('/my_wall')
 @login_required
 def my_wall():
-    r = requests.get(stories_url + "/stories-by-writer-id?writer_id=" + current_user + "&user_id=" + current_user)
+    r = requests.get(stories_url + "/stories?writer_id=" + str(current_user.get_id()) + "&drafts=true")
     if r.status_code == 200:
-        my_stories = r.json()
-        drafts = [my_story for my_story in my_stories if not my_story.published]
-        published = [my_story for my_story in my_stories if my_story.published]
+        my_stories = r.json()['stories']
+        print(my_stories)
+        drafts = [my_story for my_story in my_stories if not my_story['published']]
+        published = [my_story for my_story in my_stories if my_story['published']]
     elif r.status_code == 404:
         drafts = []
         published = []
     else:
         abort(500)
 
-    r = requests.get(stats_url + "/stats/" + current_user)
+    r = requests.get(stats_url + "/stats/" + str(current_user.get_id()))
     if r.status_code != 200:
         abort(500)
 
-    stats = r.json()
+    stats = r.json()['score']
     return render_template("mywall.html", published=published, drafts=drafts, stats=stats)
 
 """
