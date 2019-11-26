@@ -9,6 +9,7 @@ from gateway.auth import admin_required, current_user
 users = Blueprint('users', __name__)
 stories_url = "http://127.0.0.1:7000"
 stats_url = "http://127.0.0.1:9000"
+followers_url = "http://127.0.0.1:8000"
 
 """
 This route returns to a logged user the list of the writers in the social network and
@@ -131,9 +132,9 @@ This route lets a logged user see his own followers.
 @users.route('/my_wall/followers', methods=['GET'])
 @login_required
 def my_followers():
-    r = requests.get(followers_url + "/followers-list/" + current_user)
+    r = requests.get(followers_url + "/followers-list/" + str(current_user.get_id()))
     if r.status_code == 200:
-        followers = r.json()
+        followers = r.json()['followers']
     elif r.status_code == 404:
         followers = []
     else:

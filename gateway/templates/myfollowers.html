@@ -6,7 +6,7 @@
   <ul>
     {% for follower in followers: %}
     <li>
-    <a href="/wall/{{follower.id}}">{{follower.firstname}} {{follower.lastname}}</a>
+    <a href="/wall/{{follower['follower_id']}}">{{follower['follower_name']}}</a>
     </li>
     {% endfor %}
   </ul>
