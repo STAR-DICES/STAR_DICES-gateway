@@ -8,4 +8,4 @@ COPY . .
 RUN python3 setup.py develop
 ENV LANG C.UTF-8
 EXPOSE 5000
-CMD ["python3", "auth/app.py"]
+CMD ["python3", "gateway/app.py"]
