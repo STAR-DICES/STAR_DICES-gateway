@@ -1,8 +1,10 @@
 from gateway.auth import login_manager
 from gateway.views import blueprints
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
 
+def internal_error(e):
+    return render_template('message.html', message='\_(-.-)_/ SOMETHING WENT WRONG \_(-.-)_/'), 500
 
 def create_app(test = False):
     app = Flask(__name__, static_url_path='/static')
@@ -19,6 +21,7 @@ def create_app(test = False):
         bp.app = app
 
     app.users = {}
+    app.register_error_handler(500, internal_error)
     login_manager.init_app(app)
     return app
 
