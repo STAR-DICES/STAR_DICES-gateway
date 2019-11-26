@@ -14,9 +14,9 @@
       <br><br>
       Choose number of dice:
       <select name="dice_number">
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
+        {% for i in dice_number %}
+            <option value="{{i}}">{{i}}</option>
+        {% endfor %}
       </select>
       <br><br>
       <button type="submit"> Throw Dice! </button>

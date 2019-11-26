@@ -35,6 +35,7 @@ def login(message=''):
             user = User(user_id, firstname)
             app.users[str(user_id)] = user
             login_user(user)
+            print('redirect')
             return redirect('/')
         elif r.status_code == 401:
             form.message = "User or Password not correct!"

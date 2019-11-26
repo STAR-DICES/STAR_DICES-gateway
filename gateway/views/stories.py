@@ -1,5 +1,6 @@
 import datetime
 import requests
+import json
 import re
 
 from flask import Blueprint, redirect, render_template, request, abort
@@ -10,6 +11,8 @@ from gateway.auth import admin_required, current_user
 
 
 stories = Blueprint('stories', __name__)
+stories_url = "http://127.0.0.1:7000"
+rank_url = "http://127.0.0.1:9000"
 
 """
 This route returns, if the user is logged in, the list of stories of the followed writers
@@ -18,20 +21,22 @@ If not logged, the anonymous user is redirected to the login page.
 """
 @stories.route('/', methods=['GET'])
 def _myhome(message=''):
+    print('home page')
     if current_user.is_anonymous:
         return redirect("/login", code=302)
 
-    r = requests.get(stories_url + "/following-stories/" + current_user)
+    r = requests.get(stories_url + "/following-stories/" + str(current_user.get_id()))
     if r.status_code != 200:
         abort(500)
-    followed_stories = r.json()
+    followed_stories = r.json()['stories']
 
-    r = requests.get(rank_url + "/rank/" + current_user)
-    if r.status_code != 200:
-        abort(500)
-    suggested_stories = r.json()
+#    r = requests.get(rank_url + "/rank/" + current_user)
+#    if r.status_code != 200:
+#        abort(500)
+#    suggested_stories = r.json()
+    suggested_stories = []
 
-    return render_template("home.html",followed_stories=followed_stories, suggested_stories=suggested_stories)
+    return render_template("home.html", followed_stories=followed_stories, suggested_stories=suggested_stories)
 
 """
 This route returns, if the user is logged in, the list of all stories from all users
@@ -43,25 +48,25 @@ If not logged, the anonymous user is redirected to the login page.
 def _stories(message=''):
     if request.method == 'POST':
         beginDate = request.form["beginDate"]
-        if beginDate == "" or not is_date(beginDate):
+        if beginDate == "":
             beginDate = str(datetime.date.min)
 
         endDate = request.form["endDate"]
-        if endDate == "" or not is_date(endDate):
+        if endDate == "":
             endDate = str(datetime.date.max)
 
-        r = requests.get(stories_url + "/stories_by_url/start=" + beginDate + "&end=" + endDate)
+        r = requests.get(stories_url + "/stories?start=" + beginDate + "&end=" + endDate)
         if r.status_code != 200:
             abort(500)
 
-        filtered_stories = r.json()
-        return render_template("explore.html", message="Filtered stories", stories=stories)
+        filtered_stories = r.json()['stories']
+        return render_template("explore.html", message="Filtered stories", stories=filtered_stories)
     else:
         r = requests.get(stories_url + "/stories")
         if r.status_code != 200:
             abort(500)
 
-        stories = r.json()
+        stories = r.json()['stories']
         return render_template("explore.html", message=message, stories=stories)
 
 """
@@ -72,7 +77,7 @@ options for like/dislike/delete (if authorized) options.
 @stories.route('/story/<int:story_id>')
 @login_required
 def _story(story_id, message=''):
-    r = requests.get(stories_url + "/story/" + story_id + "/" + current_user)
+    r = requests.get(stories_url + "/story/" + str(story_id) + "/" + str(current_user.get_id()))
     if r.status_code == 404:
         message = 'Ooops.. Story not found!'
         return render_template("message.html", message=message)
@@ -80,7 +85,9 @@ def _story(story_id, message=''):
         abort(500)
 
     story = r.json()
-    rolls_outcome = story['rolls_outcome']
+    rolls_outcome = json.loads(story['rolls_outcome'])
+    for roll in rolls_outcome:
+        print(roll)
     return render_template("story.html", message=message, story=story,
                            current_user=current_user, rolls_outcome=rolls_outcome)
 
@@ -224,14 +231,17 @@ def new_stories():
         if r.status_code != 200:
             abort(500)
 
-        dice_themes = r.json()
-        return render_template("new_story.html", themes=dice_themes)
+        dice_themes = r.json()['themes']
+        dice_number = [i+1 for i in range(r.json()['dice_number'])]
+        return render_template("new_story.html", themes=dice_themes, dice_number=dice_number)
     else:
         data = {
+            'user_id': current_user.get_id(),
             'theme': request.form["theme"],
-            'dice_number': request.form["dice_number"]
+            'dice_number': int(request.form["dice_number"]),
+            'author_name': current_user.firstname
         }
-        r = requests.post(stories_url + "/new_draft", json=data)
+        r = requests.post(stories_url + "/new-draft", json=data)
         if r.status_code != 200:
             abort(500)
         
@@ -246,7 +256,7 @@ In both cases the used will be able to save it as draft or publish it.
 @stories.route('/write_story/<story_id>', methods=['POST', 'GET'])
 @login_required
 def write_story(story_id):
-    r = requests.get(stories_url + "/story/" + story_id + "/" + current_user)
+    r = requests.get(stories_url + "/story/" + str(story_id) + "/" + str(current_user.get_id()))
     if r.status_code == 404:
         abort(404)
     elif r.status_code == 401:
@@ -255,57 +265,26 @@ def write_story(story_id):
         abort(500)
 
     story = r.json()
-    rolls_outcome = story.rolls_outcome
+    rolls_outcome = json.loads(story['rolls_outcome'])
+    theme = story['theme']
 
     if request.method == 'POST':
-        story.text = request.form["text"],
-        story.published = request.form["store_story"] == "1",
-        if not story.published and (story.title == "None" or len(story.title.replace(" ", "")) == 0):
-            story.title = "Draft(" + story.theme + ")" 
-        else:
-            story.title = request.form["title"]
-
-        # TODO: move these checks to stories microservice.
-        if story.published and not is_story_valid(story.text, rolls_outcome):
-            message = "You must use all the words of the outcome!"
-            return render_template("/write_story.html", theme=story.theme, outcome=rolls_outcome,
-                                   title=story.title, text=story.text, message=message)
-
-        if story.published and (story.title == "" or story.title == "None"):
-            message = "You must complete the title in order to publish the story"
-            return render_template("/write_story.html", theme=story.theme, outcome=rolls_outcome,
-                                   title=story.title, text=story.text, message=message)
-
-        r = requests.put(stories_url + "/write_story", json=story)
+        story = {}
+        story['text'] = request.form["text"]
+        story['published'] = request.form["store_story"] == "1"
+        story['title'] = request.form["title"]
+        story['story_id'] = int(story_id)
+        r = requests.put(stories_url + "/write-story", json=story)
         if r.status_code != 200:
-            abort(500)
+            message = r.json()['description']
+            return render_template("/write_story.html", theme=theme, outcome=rolls_outcome,
+                                   title=story['title'], text=story['text'], message=message)
 
-        if story.published:
-            return redirect("../story/" + str(story.id), code=302)
+        if story['published']:
+            return redirect("../story/" + str(story['story_id']), code=302)
         else:
             return redirect("../", code=302)
 
-    # GET method
-    r = requests.get(stories_url + "/story/" + story_id + "/" + current_user)
-    if r.status_code == 404:
-        abort(404)
-    elif r.status_code == 401:
-        abort(401)
-    elif r.status_code != 200:
-        abort(500)
+    return render_template("/write_story.html", theme=story['theme'], outcome=rolls_outcome,
+                           title=story['title'], text=story['text'], message="")
 
-    faces = _throw_to_faces(rolls_outcome)
-    return render_template("/write_story.html", theme=story.theme, outcome=rolls_outcome, title=story.title,
-                           text=story.text, message="")
-
-"""
-Function to be called during story publishing that checks if the story
-contains the rolled dice faces.
-If it return False, stop publishing and return an error message.
-"""
-def is_story_valid(story_text, dice_roll):
-    split_story_text = re.findall(r"[\w']+|[.,!?;]", story_text.lower())
-    for word in dice_roll:
-        if word.lower() not in split_story_text:
-            return False
-    return True
