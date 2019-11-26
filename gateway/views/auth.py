@@ -10,7 +10,7 @@ from gateway.forms import LoginForm, UserForm
 from gateway.classes.user import User
 
 auth = Blueprint('auth', __name__)
-auth_url = "http://127.0.0.1:6000"
+auth_url = "http://auth:5000"
 
 """
 This route is used to display the form to let the user login.

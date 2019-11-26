@@ -11,9 +11,9 @@ from gateway.auth import admin_required, current_user
 
 
 stories = Blueprint('stories', __name__)
-stories_url = "http://127.0.0.1:7000"
-rank_url = "http://127.0.0.1:3000"
-reactions_url = "http://127.0.0.1:4000"
+stories_url = "http://stories:5000"
+rank_url = "http://rank:5000"
+reactions_url = "http://reactions:5000"
 
 """
 This route returns, if the user is logged in, the list of stories of the followed writers
