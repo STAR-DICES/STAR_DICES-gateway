@@ -7,9 +7,9 @@ from gateway.auth import admin_required, current_user
 
 
 users = Blueprint('users', __name__)
-stories_url = "http://127.0.0.1:7000"
-stats_url = "http://127.0.0.1:9000"
-followers_url = "http://127.0.0.1:8000"
+stories_url = "http://stories:5000"
+stats_url = "http://stats:5000"
+followers_url = "http://follows:5000"
 
 """
 This route returns to a logged user the list of the writers in the social network and
