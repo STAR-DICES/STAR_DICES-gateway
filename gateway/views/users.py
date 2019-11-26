@@ -1,5 +1,4 @@
 import requests
-import json
 
 from flask import Blueprint, redirect, render_template, request, url_for, abort
 from flask_login import current_user, login_user, logout_user, login_required
@@ -17,7 +16,7 @@ their last published story (if any).
 @login_required
 def _users():
     r = requests.get(stories_url + "/writers-last-story")
-    data = json.loads(r.json())
+    data = r.json()
     return render_template("users.html", data=data)
 
 """
@@ -29,7 +28,7 @@ stories.
 def my_wall():
     r = requests.get(stories_url + "/stories-by-writer-id?writer_id=" + current_user + "&user_id=" + current_user)
     if r.status_code == 200:
-        my_stories = json.loads(r.json())
+        my_stories = r.json()
         drafts = [my_story for my_story in my_stories if not my_story.published]
         published = [my_story for my_story in my_stories if my_story.published]
     elif r.status_code == 404:
@@ -42,7 +41,7 @@ def my_wall():
     if r.status_code != 200:
         abort(500)
 
-    stats = json.loads(r.json())
+    stats = r.json()
     return render_template("mywall.html", published=published, drafts=drafts, stats=stats)
 
 """
@@ -59,7 +58,7 @@ def wall(author_id):
     elif r.status_code != 200:
         abort(500)
 
-    stories = json.loads(r.json())
+    stories = r.json()
     if not stories:
         # Only users with published stories are considered writers.
         message = "Ooops.. Writer not found!"
@@ -79,13 +78,13 @@ This route lets a logged user follow another user.
 def follow(author_id):
     if author_id == current_user.id:
         message = "Cannot follow yourself"
-        return render_template('message.html', message = message)
+        return render_template('message.html', message=message)
 
     data = {
         'user_id': current_user,
         'followee_id': author_ir
     }
-    r = requests.put(follows_url + "/follow", data=json.dumps(data))
+    r = requests.put(follows_url + "/follow", json=data))
     if r.status_code == 200:
         message = "Following!"
     elif r.status_code == 409:
@@ -94,6 +93,7 @@ def follow(author_id):
         abort(404)
     else:
         abort(500)
+
     return render_template('message.html', message=message)
 
 """
@@ -104,13 +104,13 @@ This route lets a logged user unfollow a followed user.
 def unfollow(author_id):
     if author_id == current_user.id:
         message = "Cannot unfollow yourself"
-        return render_template('message.html', message = message)
+        return render_template('message.html', message=message)
 
     data = {
         'user_id': current_user,
         'followee_id': author_ir
     }
-    r = requests.delete(follows_url + "/follow", data=json.dumps(data))
+    r = requests.delete(follows_url + "/follow", json=data))
     if r.status_code == 200:
         message = "Following!"
     elif r.status_code == 409:
@@ -119,7 +119,8 @@ def unfollow(author_id):
         abort(404)
     else:
         abort(500)
-    return render_template('message.html', message = message)
+
+    return render_template('message.html', message=message)
 
 """
 This route lets a logged user see his own followers.
@@ -129,7 +130,7 @@ This route lets a logged user see his own followers.
 def my_followers():
     r = requests.get(followers_url + "/followers-list/" + current_user)
     if r.status_code == 200:
-        followers = json.loads(r.json())
+        followers = r.json()
     elif r.status_code == 404:
         followers = []
     else:

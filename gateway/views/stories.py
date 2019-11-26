@@ -1,6 +1,5 @@
 import datetime
 import requests
-import json
 import re
 
 from flask import Blueprint, redirect, render_template, request, abort
@@ -25,12 +24,12 @@ def _myhome(message=''):
     r = requests.get(stories_url + "/following-stories/" + current_user)
     if r.status_code != 200:
         abort(500)
-    followed_stories = json.loads(r.json())
+    followed_stories = r.json()
 
     r = requests.get(rank_url + "/rank/" + current_user)
     if r.status_code != 200:
         abort(500)
-    suggested_stories = json.loads(r.json())
+    suggested_stories = r.json()
 
     return render_template("home.html",followed_stories=followed_stories, suggested_stories=suggested_stories)
 
@@ -55,14 +54,14 @@ def _stories(message=''):
         if r.status_code != 200:
             abort(500)
 
-        filtered_stories = json.loads(r.json())
+        filtered_stories = r.json()
         return render_template("explore.html", message="Filtered stories", stories=stories)
     else:
         r = requests.get(stories_url + "/stories")
         if r.status_code != 200:
             abort(500)
 
-        stories = json.loads(r.json())
+        stories = r.json()
         return render_template("explore.html", message=message, stories=stories)
 
 """
@@ -80,7 +79,7 @@ def _story(story_id, message=''):
     elif r.status_code != 200:
         abort(500)
 
-    story = json.loads(r.json())
+    story = r.json()
     rolls_outcome = story['rolls_outcome']
     return render_template("story.html", message=message, story=story,
                            current_user=current_user, rolls_outcome=rolls_outcome)
@@ -93,7 +92,7 @@ if the author id is the same of the user calling it.
 @login_required
 def _delete_story(story_id):
     data = {'user_id': current_user}
-    r = requests.delete(stories_url + "/story/" + story_id, data=json.dumps(data))
+    r = requests.delete(stories_url + "/story/" + story_id, json=data)
     if r.status_code != 200:
         abort(r.status_code)
 
@@ -109,7 +108,8 @@ written from someone else user.
 def _random_story(message=''):
     r = requests.get(stories_url + "/random-story")
     if r.status_code == 200:
-        rolls_outcome = json.loads(story.rolls_outcome)
+        story = r.json()
+        rolls_outcome = story['rolls_outcome']
     elif r.status_code == 404:
         message = 'Ooops.. No random story for you!'
         rolls_outcome = []
@@ -129,7 +129,7 @@ def _like(story_id):
         'user_id': current_user,
         'story_id': story_id
     }
-    r.requests.post(reactions_url + "/like", data=json.dumps(data))
+    r.requests.post(reactions_url + "/like", json=data)
     if r.status_code == 200:
         message = 'Like added!'
     elif r.status_code == 409:
@@ -151,7 +151,7 @@ def _dislike(story_id):
         'user_id': current_user,
         'story_id': story_id
     }
-    r.requests.post(reactions_url + "/like", data=json.dumps(data))
+    r.requests.post(reactions_url + "/like", json=data)
     if r.status_code == 200:
         message = 'Dislike added!'
     elif r.status_code == 409:
@@ -174,7 +174,7 @@ def _remove_like(story_id):
         'user_id': current_user,
         'story_id': story_id
     }
-    r.requests.delete(reactions_url + "/like", data=json.dumps(data))
+    r.requests.delete(reactions_url + "/like", json=data)
     if r.status_code == 200:
         message = 'You removed your like'
     elif r.status_code == 409:
@@ -197,7 +197,7 @@ def _remove_dislike(story_id):
         'user_id': current_user,
         'story_id': story_id
     }
-    r.requests.post(reactions_url + "/like", data=json.dumps(data))
+    r.requests.post(reactions_url + "/like", json=data)
     if r.status_code == 200:
         message = 'You removed your dislike'
     elif r.status_code == 409:
@@ -224,18 +224,18 @@ def new_stories():
         if r.status_code != 200:
             abort(500)
 
-        dice_themes = json.loads(r.json())
+        dice_themes = r.json()
         return render_template("new_story.html", themes=dice_themes)
     else:
         data = {
             'theme': request.form["theme"],
             'dice_number': request.form["dice_number"]
         }
-        r = requests.post(stories_url + "/new_draft", data=json.dumps(data))
+        r = requests.post(stories_url + "/new_draft", json=data)
         if r.status_code != 200:
             abort(500)
         
-        new_story_id = json.loads(r.json())['story_id']
+        new_story_id = r.json()['story_id']
         return redirect('/write_story/' + str(new_story_id), code=302)
 
 """
@@ -254,7 +254,7 @@ def write_story(story_id):
     elif r.status_code != 200:
         abort(500)
 
-    story = json.loads(r.json())
+    story = r.json()
     rolls_outcome = story.rolls_outcome
 
     if request.method == 'POST':
@@ -276,7 +276,7 @@ def write_story(story_id):
             return render_template("/write_story.html", theme=story.theme, outcome=rolls_outcome,
                                    title=story.title, text=story.text, message=message)
 
-        r = requests.put(stories_url + "/write_story", data=json.dumps(story))
+        r = requests.put(stories_url + "/write_story", json=story)
         if r.status_code != 200:
             abort(500)
 
