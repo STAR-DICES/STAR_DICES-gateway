@@ -29,10 +29,9 @@ stories.
 @users.route('/my_wall')
 @login_required
 def my_wall():
-    r = requests.get(stories_url + "/stories?writer_id=" + str(current_user.get_id()) + "&drafts=true")
+    r = requests.get(stories_url + "/stories?drafts=true&writer_id=" + str(current_user.get_id()))
     if r.status_code == 200:
         my_stories = r.json()['stories']
-        print(my_stories)
         drafts = [my_story for my_story in my_stories if not my_story['published']]
         published = [my_story for my_story in my_stories if my_story['published']]
     elif r.status_code == 404:
@@ -55,14 +54,14 @@ published stories.
 @users.route('/wall/<int:author_id>', methods=['GET'])
 @login_required
 def wall(author_id):
-    r = requests.get(stories_url + "/stories-by-writer-id?writer_id=" + author_id + "&user_id=" + current_usr)
+    r = requests.get(stories_url + "/stories?drafts=false&writer_id=" + str(author_id))
     if r.status_code == 404:
         message = "Ooops.. Writer not found!"
         return render_template("message.html", message=message)
     elif r.status_code != 200:
         abort(500)
 
-    stories = r.json()
+    stories = r.json()['stories']
     if not stories:
         # Only users with published stories are considered writers.
         message = "Ooops.. Writer not found!"
@@ -70,7 +69,7 @@ def wall(author_id):
 
     author = {
         'id': author_id,
-        'name': stories[0].author_name
+        'name': stories[0]['author_name']
     }
     return render_template("wall.html", stories=stories, author=author, current_user=current_user)
 
@@ -80,15 +79,16 @@ This route lets a logged user follow another user.
 @users.route('/wall/<int:author_id>/follow', methods=['GET'])
 @login_required
 def follow(author_id):
-    if author_id == current_user.id:
+    if author_id == current_user.get_id():
         message = "Cannot follow yourself"
         return render_template('message.html', message=message)
 
     data = {
-        'user_id': current_user,
-        'followee_id': author_ir
+        'user_id': current_user.get_id(),
+        'followee_id': author_id,
+        'user_name': current_user.firstname
     }
-    r = requests.put(follows_url + "/follow", json=data)
+    r = requests.post(followers_url + "/follow", json=data)
     if r.status_code == 200:
         message = "Following!"
     elif r.status_code == 409:
@@ -106,17 +106,17 @@ This route lets a logged user unfollow a followed user.
 @users.route('/wall/<int:author_id>/unfollow', methods=['GET'])
 @login_required
 def unfollow(author_id):
-    if author_id == current_user.id:
+    if author_id == current_user.get_id():
         message = "Cannot unfollow yourself"
         return render_template('message.html', message=message)
 
     data = {
-        'user_id': current_user,
-        'followee_id': author_ir
+        'user_id': current_user.get_id(),
+        'followee_id': author_id
     }
-    r = requests.delete(follows_url + "/follow", json=data)
+    r = requests.delete(followers_url + "/follow", json=data)
     if r.status_code == 200:
-        message = "Following!"
+        message = "Unfollowed!"
     elif r.status_code == 409:
         message = "You were not following that particular user!"
     elif r.status_code == 404:
