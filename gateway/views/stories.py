@@ -113,13 +113,14 @@ written from someone else user.
 @stories.route('/random_story')
 @login_required
 def _random_story(message=''):
-    r = requests.get(stories_url + "/random-story")
+    r = requests.get(stories_url + "/random-story/" + str(current_user.get_id()))
     if r.status_code == 200:
         story = r.json()
-        rolls_outcome = story['rolls_outcome']
+        rolls_outcome = json.loads(story['rolls_outcome'])
     elif r.status_code == 404:
         message = 'Ooops.. No random story for you!'
         rolls_outcome = []
+        story = []
     else:
         abort(500)
 
