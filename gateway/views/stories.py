@@ -13,6 +13,7 @@ from gateway.auth import admin_required, current_user
 stories = Blueprint('stories', __name__)
 stories_url = "http://127.0.0.1:7000"
 rank_url = "http://127.0.0.1:9000"
+reactions_url = "http://127.0.0.1:4000"
 
 """
 This route returns, if the user is logged in, the list of stories of the followed writers
@@ -86,8 +87,6 @@ def _story(story_id, message=''):
 
     story = r.json()
     rolls_outcome = json.loads(story['rolls_outcome'])
-    for roll in rolls_outcome:
-        print(roll)
     return render_template("story.html", message=message, story=story,
                            current_user=current_user, rolls_outcome=rolls_outcome)
 
@@ -134,10 +133,10 @@ The route can be used by a logged in user to like a published story.
 @login_required
 def _like(story_id):
     data = {
-        'user_id': current_user,
+        'user_id': current_user.get_id(),
         'story_id': story_id
     }
-    r.requests.post(reactions_url + "/like", json=data)
+    r = requests.post(reactions_url + "/like", json=data)
     if r.status_code == 200:
         message = 'Like added!'
     elif r.status_code == 409:
@@ -156,10 +155,10 @@ The route can be used by a logged in user to dislike a published story.
 @login_required
 def _dislike(story_id):
     data = {
-        'user_id': current_user,
+        'user_id': current_user.get_id(),
         'story_id': story_id
     }
-    r.requests.post(reactions_url + "/like", json=data)
+    r = requests.post(reactions_url + "/dislike", json=data)
     if r.status_code == 200:
         message = 'Dislike added!'
     elif r.status_code == 409:
@@ -179,10 +178,10 @@ from a published story.
 @login_required
 def _remove_like(story_id):
     data = {
-        'user_id': current_user,
+        'user_id': current_user.get_id(),
         'story_id': story_id
     }
-    r.requests.delete(reactions_url + "/like", json=data)
+    r = requests.delete(reactions_url + "/like", json=data)
     if r.status_code == 200:
         message = 'You removed your like'
     elif r.status_code == 409:
@@ -202,10 +201,10 @@ from a published story.
 @login_required
 def _remove_dislike(story_id):
     data = {
-        'user_id': current_user,
+        'user_id': current_user.get_id(),
         'story_id': story_id
     }
-    r.requests.post(reactions_url + "/like", json=data)
+    r = requests.delete(reactions_url + "/dislike", json=data)
     if r.status_code == 200:
         message = 'You removed your dislike'
     elif r.status_code == 409:
