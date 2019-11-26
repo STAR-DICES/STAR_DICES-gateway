@@ -57,23 +57,26 @@ published stories.
 @users.route('/wall/<int:author_id>', methods=['GET'])
 @login_required
 def wall(author_id):
-    r = requests.get(stories_url + "/stories?drafts=false&writer_id=" + str(author_id), timeout=1)
+    r = requests.get(auth_url + "/user-exists/" + str(author_id))
     if r.status_code == 404:
         message = "Ooops.. Writer not found!"
         return render_template("message.html", message=message)
     elif r.status_code != 200:
         abort(500)
 
-    stories = r.json()['stories']
-    if not stories:
-        # Only users with published stories are considered writers.
-        message = "Ooops.. Writer not found!"
-        return render_template("message.html", message=message)
-
     author = {
-        'id': author_id,
-        'name': stories[0]['author_name']
+        'author_name': r.json()['author_name'],
+        'id': author_id
     }
+
+    r = requests.get(stories_url + "/stories?drafts=false&writer_id=" + str(author_id), timeout=1)
+    if r.status_code == 200:
+        stories = r.json()['stories']
+    if r.status_code == 404:
+        stories = []
+    else:
+        abort(500)
+
     return render_template("wall.html", stories=stories, author=author, current_user=current_user)
 
 """
