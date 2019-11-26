@@ -79,10 +79,6 @@ This route lets a logged user follow another user.
 @users.route('/wall/<int:author_id>/follow', methods=['GET'])
 @login_required
 def follow(author_id):
-    if author_id == current_user.get_id():
-        message = "Cannot follow yourself"
-        return render_template('message.html', message=message)
-
     data = {
         'user_id': current_user.get_id(),
         'followee_id': author_id,
@@ -95,6 +91,8 @@ def follow(author_id):
         message = "Already following!"
     elif r.status_code == 404:
         abort(404)
+    elif r.status_code == 401:
+        message = "Cannot follow yourself"
     else:
         abort(500)
 
@@ -106,10 +104,6 @@ This route lets a logged user unfollow a followed user.
 @users.route('/wall/<int:author_id>/unfollow', methods=['GET'])
 @login_required
 def unfollow(author_id):
-    if author_id == current_user.get_id():
-        message = "Cannot unfollow yourself"
-        return render_template('message.html', message=message)
-
     data = {
         'user_id': current_user.get_id(),
         'followee_id': author_id
@@ -121,6 +115,8 @@ def unfollow(author_id):
         message = "You were not following that particular user!"
     elif r.status_code == 404:
         abort(404)
+    elif r.status_code == 401:
+        message = "Cannot follow yourself"
     else:
         abort(500)
 
