@@ -18,7 +18,7 @@ their last published story (if any).
 @users.route('/users')
 @login_required
 def _users():
-    r = requests.get(stories_url + "/writers-last-stories")
+    r = requests.get(stories_url + "/writers-last-stories", timeout=1)
     if r.status_code != 200:
         abort(500)
 
@@ -32,7 +32,7 @@ stories.
 @users.route('/my_wall')
 @login_required
 def my_wall():
-    r = requests.get(stories_url + "/stories?drafts=true&writer_id=" + str(current_user.get_id()))
+    r = requests.get(stories_url + "/stories?drafts=true&writer_id=" + str(current_user.get_id()), timeout=1)
     if r.status_code == 200:
         my_stories = r.json()['stories']
         drafts = [my_story for my_story in my_stories if not my_story['published']]
@@ -43,7 +43,7 @@ def my_wall():
     else:
         abort(500)
 
-    r = requests.get(stats_url + "/stats/" + str(current_user.get_id()))
+    r = requests.get(stats_url + "/stats/" + str(current_user.get_id()), timeout=1)
     if r.status_code != 200:
         abort(500)
 
@@ -57,7 +57,7 @@ published stories.
 @users.route('/wall/<int:author_id>', methods=['GET'])
 @login_required
 def wall(author_id):
-    r = requests.get(stories_url + "/stories?drafts=false&writer_id=" + str(author_id))
+    r = requests.get(stories_url + "/stories?drafts=false&writer_id=" + str(author_id), timeout=1)
     if r.status_code == 404:
         message = "Ooops.. Writer not found!"
         return render_template("message.html", message=message)
@@ -87,7 +87,7 @@ def follow(author_id):
         'followee_id': author_id,
         'user_name': current_user.firstname
     }
-    r = requests.post(followers_url + "/follow", json=data)
+    r = requests.post(followers_url + "/follow", json=data, timeout=1)
     if r.status_code == 200:
         message = "Following!"
     elif r.status_code == 409:
@@ -111,7 +111,7 @@ def unfollow(author_id):
         'user_id': current_user.get_id(),
         'followee_id': author_id
     }
-    r = requests.delete(followers_url + "/follow", json=data)
+    r = requests.delete(followers_url + "/follow", json=data, timeout=1)
     if r.status_code == 200:
         message = "Unfollowed!"
     elif r.status_code == 409:
@@ -131,7 +131,7 @@ This route lets a logged user see his own followers.
 @users.route('/my_wall/followers', methods=['GET'])
 @login_required
 def my_followers():
-    r = requests.get(followers_url + "/followers-list/" + str(current_user.get_id()))
+    r = requests.get(followers_url + "/followers-list/" + str(current_user.get_id()), timeout=1)
     if r.status_code == 200:
         followers = r.json()['followers']
     elif r.status_code == 404:

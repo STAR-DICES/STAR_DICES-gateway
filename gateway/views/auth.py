@@ -27,7 +27,7 @@ def login(message=''):
             'email': form.data['email'],
             'password': form.data['password']
         }
-        r = requests.post(auth_url + "/login", json=data)
+        r = requests.post(auth_url + "/login", json=data, timeout=1)
         if r.status_code == 200:
             user_info = r.json()
             user_id = user_info['user_id']
@@ -73,7 +73,7 @@ def create_user():
 			'dateofbirth': form.dateofbirth.data.strftime("%m/%d/%Y")
 		}
 
-        r = requests.post(auth_url + "/signup", json=new_user)
+        r = requests.post(auth_url + "/signup", json=new_user, timeout=1)
         if r.status_code == 200:
             user_info = r.json()
             user_id = user_info['user_id']

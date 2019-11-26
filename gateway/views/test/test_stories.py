@@ -1,5 +1,5 @@
-from monolith.views.test.TestHelper import TestHelper
-from monolith.database import db, User, Story
+from gateway.views.test.TestHelper import TestHelper
+
 
 class TestAuth(TestHelper):
 

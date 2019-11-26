@@ -1,4 +1,5 @@
-from monolith.views.test.TestHelper import TestHelper
+from gateway.views.test.TestHelper import TestHelper
+
 
 class TestAuth(TestHelper):
 

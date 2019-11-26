@@ -1,7 +1,7 @@
-from monolith.views.test.TestHelper import TestHelper
-from sqlalchemy.exc import IntegrityError
-from monolith.database import db, User
+from gateway.views.test.TestHelper import TestHelper
+
 from flask_login import current_user
+
 
 class TestAuth(TestHelper):
 

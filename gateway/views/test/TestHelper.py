@@ -1,5 +1,5 @@
-from monolith.app import create_app # pragma: no cover
-from monolith.database import db # pragma: no cover
+from gateway.app import create_app # pragma: no cover
+
 from flask_testing import TestCase # pragma: no cover
  
 class TestHelper(TestCase): # pragma: no cover
