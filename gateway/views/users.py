@@ -18,9 +18,12 @@ their last published story (if any).
 @users.route('/users')
 @login_required
 def _users():
-    r = requests.get(stories_url + "/writers-last-story")
-    data = r.json()
-    return render_template("users.html", data=data)
+    r = requests.get(stories_url + "/writers-last-stories")
+    if r.status_code != 200:
+        abort(500)
+
+    data = r.json()['stories']
+    return render_template("users.html", writers=data)
 
 """
 This route returns to a logged user his own wall with his score, pending drafts and published 

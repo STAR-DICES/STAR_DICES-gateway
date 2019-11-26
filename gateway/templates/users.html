@@ -4,14 +4,10 @@
     <body>
       <h1>Writers List</h1>
       <ul>
-        {% for entry in data: %}
+        {% for w in writers: %}
         <li>
-          <h3><a href="/wall/{{entry[0].id}}">{{entry[0].firstname}} {{entry[0].lastname}}</a></h3>
-          {% if entry[1] %}
-          <p>Last story: <a href="/story/{{entry[1].id}}">{{entry[1].title}}</a></p>
-          {% else %}
-          <p>No stories written yet</p>
-          {% endif %}
+          <h3><a href="/wall/{{w['author_id']}}">{{w['author_name']}}</a></h3>
+          <p>Last story: <a href="/story/{{w['id']}}">{{w['title']}}</a></p>
         </li>
         {% endfor %}
       </ul>
