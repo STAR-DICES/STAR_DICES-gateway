@@ -116,7 +116,7 @@ def unfollow(author_id):
     elif r.status_code == 404:
         abort(404)
     elif r.status_code == 401:
-        message = "Cannot follow yourself"
+        message = "Cannot unfollow yourself"
     else:
         abort(500)
 
