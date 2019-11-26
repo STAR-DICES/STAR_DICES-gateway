@@ -18,6 +18,7 @@ def create_app(test = False):
         app.register_blueprint(bp)
         bp.app = app
 
+    app.users = {}
     login_manager.init_app(app)
     return app
 

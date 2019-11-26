@@ -113,7 +113,7 @@ def _random_story(message=''):
     elif r.status_code == 404:
         message = 'Ooops.. No random story for you!'
         rolls_outcome = []
-    else
+    else:
         abort(500)
 
     return render_template("story.html", message=message, story=story, current_user=current_user,
@@ -136,7 +136,7 @@ def _like(story_id):
         message = "You've already liked this story!"
     elif r.status_code == 404:
         abort(404)
-    else
+    else:
         abort(500)
 
     return _story(story_id, message)
@@ -158,7 +158,7 @@ def _dislike(story_id):
         message = "You've already disliked this story!"
     elif r.status_code == 404:
         abort(404)
-    else
+    else:
         abort(500)
 
     return _story(story_id, message)
@@ -181,7 +181,7 @@ def _remove_like(story_id):
         message = 'You have to like it first!'
     elif r.status_code == 404:
         abort(404)
-    else
+    else:
         abort(500)
 
     return _story(story_id, message)
@@ -204,7 +204,7 @@ def _remove_dislike(story_id):
         message = 'You have to dislike it first!'
     elif r.status_code == 404:
         abort(404)
-    else
+    else:
         abort(500)
 
     return _story(story_id, message)
@@ -262,7 +262,7 @@ def write_story(story_id):
         story.published = request.form["store_story"] == "1",
         if not story.published and (story.title == "None" or len(story.title.replace(" ", "")) == 0):
             story.title = "Draft(" + story.theme + ")" 
-        else
+        else:
             story.title = request.form["title"]
 
         # TODO: move these checks to stories microservice.
@@ -282,7 +282,7 @@ def write_story(story_id):
 
         if story.published:
             return redirect("../story/" + str(story.id), code=302)
-        else
+        else:
             return redirect("../", code=302)
 
     # GET method

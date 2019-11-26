@@ -35,7 +35,7 @@ def my_wall():
     elif r.status_code == 404:
         drafts = []
         published = []
-    else
+    else:
         abort(500)
 
     r = requests.get(stats_url + "/stats/" + current_user)
@@ -92,7 +92,7 @@ def follow(author_id):
         message = "Already following!"
     elif r.status_code == 404:
         abort(404)
-    else
+    else:
         abort(500)
     return render_template('message.html', message=message)
 
@@ -117,7 +117,7 @@ def unfollow(author_id):
         message = "You were not following that particular user!"
     elif r.status_code == 404:
         abort(404)
-    else
+    else:
         abort(500)
     return render_template('message.html', message = message)
 
@@ -132,6 +132,6 @@ def my_followers():
         followers = json.loads(r.json())
     elif r.status_code == 404:
         followers = []
-    else
+    else:
         abort(500)
     return render_template('myfollowers.html', followers=followers)
