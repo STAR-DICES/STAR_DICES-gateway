@@ -6,6 +6,12 @@ from flask import Flask, jsonify, render_template
 def internal_error(e):
     return render_template('message.html', message='\_(-.-)_/ SOMETHING WENT WRONG \_(-.-)_/'), 500
 
+def missing_page(e):
+    return render_template('message.html', message='\_(-.-)_/ RESOURCE NOT FOUND \_(-.-)_/'), 404
+
+def unauthorized_access(e):
+    return render_template('message.html', message='\_(-.-)_/ UNAUTHORIZED ACCESS \_(-.-)_/'), 401
+
 def create_app(test = False):
     app = Flask(__name__, static_url_path='/static')
     app.config['WTF_CSRF_SECRET_KEY'] = 'A SECRET KEY'
@@ -22,6 +28,8 @@ def create_app(test = False):
 
     app.users = {}
     app.register_error_handler(500, internal_error)
+    app.register_error_handler(404, missing_page)
+    app.register_error_handler(401, unauthorized_access)
     login_manager.init_app(app)
     return app
 
