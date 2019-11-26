@@ -22,8 +22,8 @@
         <p>Likes: {{story['likes']}} <a href="/story/{{story['id']}}/like">Like it!</a> <a href="/story/{{story['id']}}/remove_like">Remove your like</a></p>
         <p>Dislikes: {{story['dislikes']}} <a href="/story/{{story['id']}}/dislike">Dislike it!</a> <a href="/story/{{story['id']}}/remove_dislike">Remove your dislike</a></p>
         <p>Published on {{story['date']}}</p>
-        {% if story['author_id'] == current_user.id %}
-        <a href="{{story['story_id']}}/delete">Delete</a>
+        {% if story['author_id'] == current_user.get_id() %}
+        <a href="{{story['id']}}/delete">Delete</a>
         {%endif%}
     {% endif %}
   </body>

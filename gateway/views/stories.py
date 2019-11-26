@@ -97,10 +97,13 @@ if the author id is the same of the user calling it.
 @stories.route('/story/<story_id>/delete')
 @login_required
 def _delete_story(story_id):
-    data = {'user_id': current_user}
-    r = requests.delete(stories_url + "/story/" + story_id, json=data)
-    if r.status_code != 200:
-        abort(r.status_code)
+    r = requests.delete(stories_url + "/story/" + str(story_id) + "/" + str(current_user.get_id()))
+    if r.status_code == 404:
+        abort(404)
+    elif r.status_code == 401:
+        abort(401)
+    elif r.status_code != 200:
+        abort(500)
 
     message = 'Story sucessfully deleted'
     return render_template("message.html", message=message)
