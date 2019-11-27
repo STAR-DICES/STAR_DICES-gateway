@@ -66,7 +66,7 @@ def wall(author_id):
         abort(500)
 
     author = {
-        'author_name': r.json()['author_name'],
+        'name': r.json()['author_name'],
         'id': author_id
     }
 
