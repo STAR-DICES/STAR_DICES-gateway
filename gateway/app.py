@@ -4,7 +4,7 @@ from gateway.views import blueprints
 from flask import Flask, jsonify, render_template
 
 def internal_error(e):
-    return render_template('message.html', message='\_(-.-)_/ SOMETHING WENT WRONG \_(-.-)_/', notlogged=True), 500
+    return render_template('message.html', message='\_(-.-)_/ SOMETHING WENT WRONG \_(-.-)_/'), 500
 
 def missing_page(e):
     return render_template('message.html', message='\_(-.-)_/ RESOURCE NOT FOUND \_(-.-)_/', notlogged=True), 404
