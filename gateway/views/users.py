@@ -10,6 +10,7 @@ users = Blueprint('users', __name__)
 stories_url = "http://stories:5000"
 stats_url = "http://stats:5000"
 followers_url = "http://follows:5000"
+auth_url = "http://auth:5000"
 
 """
 This route returns to a logged user the list of the writers in the social network and
