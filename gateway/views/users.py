@@ -73,7 +73,7 @@ def wall(author_id):
     r = requests.get(stories_url + "/stories?drafts=false&writer_id=" + str(author_id), timeout=1)
     if r.status_code == 200:
         stories = r.json()['stories']
-    if r.status_code == 404:
+    elif r.status_code == 404:
         stories = []
     else:
         abort(500)
