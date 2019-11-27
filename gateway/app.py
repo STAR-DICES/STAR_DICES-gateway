@@ -7,7 +7,7 @@ def internal_error(e):
     return render_template('message.html', message='\_(-.-)_/ SOMETHING WENT WRONG \_(-.-)_/'), 500
 
 def missing_page(e):
-    return render_template('message.html', message='\_(-.-)_/ RESOURCE NOT FOUND \_(-.-)_/', notlogged=True), 404
+    return render_template('message.html', message='\_(-.-)_/ RESOURCE NOT FOUND \_(-.-)_/'), 404
 
 def unauthorized_access(e):
     return render_template('message.html', message='\_(-.-)_/ UNAUTHORIZED ACCESS \_(-.-)_/', notlogged=True), 401
